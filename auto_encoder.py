@@ -10,7 +10,7 @@ import h5py
 h5 = h5py.File('data/TIMIT_enc_dec_train.hdf5','r')
 # X_p = h5['data']['train_normalized'][()]
 X_p = h5['data']['train_original'][()]
-X_p = X_p / 10000
+# X_p = X_p / 10000
 print'X_p type and shape:', X_p.dtype, X_p.shape
 print'X_p.min():', X_p.min()
 print'X_p.max():', X_p.max()
@@ -46,6 +46,6 @@ print Y_pred.shape
 plt.figure(1)
 plt.title('Signal Wave...')
 plt.plot(X_p[0,:])
-plt.plot(Y_pred[0,:])
+# plt.plot(Y_pred[0,:]/ 10000)
 plt.savefig('predicted.png')
 
