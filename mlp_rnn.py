@@ -1,3 +1,4 @@
+from keras.layers import TimeDistributed
 
 from tools.autoencoder_model import *
 from keras.models import Sequential
@@ -32,10 +33,10 @@ print tr_out_dec[0].shape
 
 
 
-for u in range(tr_in.shape[0]):
-    tr_in[u]=tr_in[u][:,:26]
-for u in range(dev_in.shape[0]):
-    dev_in[u]=dev_in[u][:,:26]
+# for u in range(tr_in.shape[0]):
+#     tr_in[u]=tr_in[u][:,:26]
+# for u in range(dev_in.shape[0]):
+#     dev_in[u]=dev_in[u][:,:26]
 # for u in range(tst_in.shape[0]):
 #     tst_in[u]=tst_in[u][:,:26]
 
@@ -64,13 +65,18 @@ dev_out=dec2onehot(dev_out_dec)
 
 model = Sequential()
 
-model.add(Dense(input_dim=input_dim,output_dim=hidden_num))
-model.add(Activation('tanh'))
-model.add(Dropout(0.3))
-model.add(Dense(output_dim=hidden_num))
-model.add(Activation('tanh'))
-model.add(Dense(output_dim=output_dim))
+#model.add(LSTM_w_peepholes(input_dim=input_dim,output_dim=hidden_num,return_sequences=True))
+model.add(LSTM(input_dim=input_dim,output_dim=hidden_num,return_sequences=True))
+model.add(TimeDistributed(Dense(output_dim=output_dim)))
 model.add(Activation('softmax'))
+
+#optimizer = SGD(lr=4e-3, momentum=0.9, nesterov=False)
+optimizer= Adam(lr=0.0001)
+# optimizer=RMSprop(lr=4e-3)
+loss='categorical_crossentropy'
+metrics=['accuracy']
+
+model.compile(loss=loss, optimizer=optimizer, metrics=metrics)
 
 # optimizer= SGD(lr=0.003,momentum=0.9,nesterov=True)
 optimizer = Adam()
@@ -81,13 +87,15 @@ model.compile(loss=loss, optimizer=optimizer, metrics=metrics)
 
 
 from random import shuffle
-
 tr_hist=History('Train')
 dev_hist=History('Dev')
 tst_hist=History('Test')
 
-
 tr_it=range(tr_in.shape[0])
+
+print np.array([tr_in[0]]).shape
+print tr_in[0].shape
+
 
 for e in range(epoch_num):
 
@@ -95,24 +103,24 @@ for e in range(epoch_num):
     sys.stdout.flush()
 
     shuffle(tr_it)
-
-
     for u in tqdm(tr_it):
-        l,a=model.train_on_batch(tr_in[u],tr_out[u])
+        l,a=model.train_on_batch(np.array([tr_in[u]]),np.array([tr_out[u]]))
         tr_hist.r.addLA(l,a,tr_out[u].shape[0])
     clear_output()
     tr_hist.log()
 
     for u in range(dev_in.shape[0]):
-        l,a=model.test_on_batch(dev_in[u],dev_out[u])
+        l,a=model.test_on_batch(np.array([dev_in[u]]),np.array([dev_out[u]]))
         dev_hist.r.addLA(l,a,dev_out[u].shape[0])
     dev_hist.log()
 
 
     # for u in range(tst_in.shape[0]):
-    #     l,a=model.test_on_batch(tst_in[u],tst_out[u])
+    #     l,a=model.test_on_batch(np.array([tst_in[u]]),np.array([tst_out[u]]))
     #     tst_hist.r.addLA(l,a,tst_out[u].shape[0])
     # tst_hist.log()
+
+print 'Done!'
 
 
 pickle.dump(model, open('models/classifier_enc.pkl','wb'))

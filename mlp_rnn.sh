@@ -8,4 +8,4 @@ module load cudnn
 module load mxnet
 module load python
 source asr/bin/activate
-THEANO_FLAGS=mode='FAST_RUN,device=gpu,floatX=float32,lib.cnmem=1' srun -u python mlp.py
+THEANO_FLAGS=mode='FAST_RUN,device=gpu,floatX=float32,lib.cnmem=1' srun -u python mlp_rnn.py
