@@ -4,11 +4,13 @@ from scipy.io.wavfile import read
 import os
 import h5py
 from tqdm import *
-
-sys.path.append('../PyHTK/python')
+from scikits.audiolab import Sndfile
+# sys.path.append('../PyHTK/tools')
 
 from HTKFeat import MFCC_HTK
 from PHN import PHN
+
+fs=16000
 
 class Segment:
     def __init__(self):
@@ -78,14 +80,25 @@ def prepare_corp(mlf,statelist,audio_path):
         
         utt.name=utt_name
         
-        wav_path=audio_path+'/'+utt_name+'.wav'
+        wav_path=audio_path+'/'+utt_name.replace("_","/")+'.wav'
         
         if not os.path.exists(wav_path):
-            raise IOError(wav_path)
+            # raise IOError(wav_path)
+            print "Skipping %s" % wav_path
+            continue
         
-        fs,utt.data=read(wav_path)
-        
-        assert fs == 16000
+        # fs,utt.data=read()
+
+        try:
+            sndF=Sndfile(wav_path, 'r')
+            utt.data = sndF.read_frames(sndF.nframes,dtype=int)
+            actual_fs = 16000
+        except Exception as e:
+            actual_fs = 16001
+            print "Skipping %s" % wav_path
+            print e
+            continue
+        # assert fs == fs
         
         for seg in segs:
             utt.phones.append(states[seg.text])
@@ -104,10 +117,17 @@ def prepare_corp_dir(list_file,path,win_len=0.025,win_shift=0.01):
         utt=Utt()
        
         utt.name=f
-        
-        fs,utt.data=read(path+'/'+f+'.wav')
-        
-        assert fs == 16000
+
+        # fs,utt.data=read()
+        try:
+            sndF=Sndfile(path+'/'+f+'.wav', 'r')
+            utt.data = sndF.read_frames(sndF.nframes,dtype=np.int16)
+            actual_fs = 16000
+        except Exception as e:
+            actual_fs = 16001
+            print "Skipping %s" % path+'/'+f+'.wav'
+            print e
+            continue
 
         tg_file=path+'/'+f+'.phn'
 
@@ -149,14 +169,31 @@ def prepare_corp_dir(list_file,path,win_len=0.025,win_shift=0.01):
         ret.append(utt)
     return ret
 
+def encoeder_decoder_dataset(corpus, savefile):
+    mfcc=MFCC_HTK()
+    h5f=h5py.File(savefile,'w')
+    corpus_windows_normal = []
+    corpus_windows_original = []
+    for utt in tqdm(corpus):
+        utt_windows_normal = mfcc.get_windows(utt.data.astype(np.float32),normalize=True)
+        utt_windows_original = mfcc.get_windows(utt.data.astype(np.float32),normalize=False)
+        for win in utt_windows_normal:
+            corpus_windows_normal.append(win)
+        for win in utt_windows_original:
+            corpus_windows_original.append(win)
+    g=h5f.create_group('/data')
+    g['train_normalized'] = np.array(corpus_windows_normal)
+    g['train_original'] = np.array(corpus_windows_original)
+
 def extract_features(corpus, savefile):
     
     mfcc=MFCC_HTK()
     h5f=h5py.File(savefile,'w')
     
     for utt in tqdm(corpus):
-
-        feat=mfcc.get_feats(utt.data.astype(np.float64))
+        encoded_feats=mfcc.get_encoding(utt.data.astype(np.float32))
+        feat=mfcc.get_feats(utt.data.astype(np.float32))
+        # encoded_feats = np.column_stack((encoded_feats,feat[:,-1])) #Add the energy to the encoded features
         delta=mfcc.get_delta(feat)
         acc=mfcc.get_delta(delta)
 
@@ -180,9 +217,10 @@ def extract_features(corpus, savefile):
         
         assert len(o)==utt_len
 
-        g=h5f.create_group('/'+utt.name)
+        g=h5f.create_group('/'+utt.name.replace('/','_'))
         
         g['in']=feat
+        g['enc_400']=encoded_feats
         g['out']=o
         
         h5f.flush()
@@ -200,7 +238,12 @@ def normalize(corp_file):
         n=f-np.mean(f)
         n/=np.std(n)        
         h5f[utt]['norm']=n
-        
+
+        f=h5f[utt]['enc_400']
+        n=f-np.mean(f)
+        n/=np.std(n)
+        h5f[utt]['enc_400_norm']=n
+
         h5f.flush()
         
     h5f.close()

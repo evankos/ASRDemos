@@ -92,7 +92,31 @@ class Corpus:
             outputs=np.array(outputs)
 
         return (inputs,outputs)
+    def get_enc(self,s=None):
 
+        if self.load_normalized:
+            in_name='enc_400_norm'
+        else:
+            in_name='enc_400'
+
+        if s==None:
+            s=slice(None,None)
+
+        inputs=[]
+        outputs=[]
+        for utt in self.utts[s]:
+            g=self.h5f[utt]
+            inputs.append(g[in_name][()])
+            outputs.append(g['out'][()])
+
+        if self.merge_utts:
+            inputs=np.vstack(inputs)
+            outputs=np.concatenate(outputs)
+        else:
+            inputs=np.array(inputs)
+            outputs=np.array(outputs)
+
+        return (inputs,outputs)
     def getMaxLen(self):
         m=0
         for u in self.h5f:    
