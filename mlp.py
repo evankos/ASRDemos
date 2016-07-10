@@ -16,11 +16,14 @@ train=Corpus('data/TIMIT_train.hdf5',load_normalized=True)
 dev=Corpus('data/TIMIT_dev.hdf5',load_normalized=True)
 # test=Corpus('../data/TIMIT_test.hdf5',load_normalized=True)
 
-tr_in,tr_out_dec=train.get()
-dev_in,dev_out_dec=dev.get()
-
-# tr_in,tr_out_dec=train.get_enc()
-# dev_in,dev_out_dec=dev.get_enc()
+enc='mfcc'
+if enc=='mfcc':
+    tr_in,tr_out_dec=train.get()
+    dev_in,dev_out_dec=dev.get()
+else:
+    enc='encoded'
+    tr_in,tr_out_dec=train.get_enc()
+    dev_in,dev_out_dec=dev.get_enc()
 
 # tst_in,tst_out_dec=test.get()
 
@@ -138,7 +141,7 @@ ax[1].plot(100*(1-np.array(dev_hist.acc)),label='Dev')
 # ax[1].plot(100*(1-np.array(tst_hist.acc)),label='Test')
 ax[1].legend()
 ax[1].set_ylim((45,55))
-fig.savefig('train_enc.png')
+fig.savefig('train_%s_.png' % (enc))
 
 print 'Min train PER: {:%}'.format(1-np.max(tr_hist.acc))
 # print 'Min test PER: {:%}'.format(1-np.max(tst_hist.acc))

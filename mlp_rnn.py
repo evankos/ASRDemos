@@ -16,12 +16,14 @@ from sklearn.metrics import log_loss
 train=Corpus('data/TIMIT_train.hdf5',load_normalized=True)
 dev=Corpus('data/TIMIT_dev.hdf5',load_normalized=True)
 # test=Corpus('../data/TIMIT_test.hdf5',load_normalized=True)
-
-tr_in,tr_out_dec=train.get()
-dev_in,dev_out_dec=dev.get()
-
-# tr_in,tr_out_dec=train.get_enc()
-# dev_in,dev_out_dec=dev.get_enc()
+enc='mfcc'
+if enc=='mfcc':
+    tr_in,tr_out_dec=train.get()
+    dev_in,dev_out_dec=dev.get()
+else:
+    enc='encoded'
+    tr_in,tr_out_dec=train.get_enc()
+    dev_in,dev_out_dec=dev.get_enc()
 
 # tst_in,tst_out_dec=test.get()
 
@@ -44,8 +46,8 @@ print tr_out_dec[0].shape
 input_dim=tr_in[0].shape[1]
 output_dim=61
 hidden_num=512
-epoch_num=3
-
+epoch_num=20
+sequence_length=3
 
 def dec2onehot(dec):
     ret=[]
@@ -93,9 +95,6 @@ tst_hist=History('Test')
 
 tr_it=range(tr_in.shape[0])
 
-print np.array([tr_in[0]]).shape
-print tr_in[0].shape
-
 
 for e in range(epoch_num):
 
@@ -104,14 +103,26 @@ for e in range(epoch_num):
 
     shuffle(tr_it)
     for u in tqdm(tr_it):
-        l,a=model.train_on_batch(np.array([tr_in[u]]),np.array([tr_out[u]]))
-        tr_hist.r.addLA(l,a,tr_out[u].shape[0])
+        if sequence_length==0:
+            uterance_train = np.array([tr_in[u]])
+            uterance_target = np.array([tr_out[u]])
+        else:
+            uterance_train = rolling_window(tr_in[u], window=sequence_length)
+            uterance_target = rolling_window(tr_out[u], window=sequence_length)
+        l,a=model.train_on_batch(uterance_train,uterance_target)
+        tr_hist.r.addLA(l,a,uterance_target.shape[0])
     # clear_output()
     tr_hist.log()
 
     for u in range(dev_in.shape[0]):
-        l,a=model.test_on_batch(np.array([dev_in[u]]),np.array([dev_out[u]]))
-        dev_hist.r.addLA(l,a,dev_out[u].shape[0])
+        if sequence_length==0:
+            uterance_train = np.array([dev_in[u]])
+            uterance_target = np.array([dev_out[u]])
+        else:
+            uterance_train = rolling_window(dev_in[u], window=sequence_length)
+            uterance_target = rolling_window(dev_out[u], window=sequence_length)
+        l,a=model.train_on_batch(uterance_train,uterance_target)
+        dev_hist.r.addLA(l,a,uterance_target.shape[0])
     dev_hist.log()
 
 
@@ -123,9 +134,9 @@ for e in range(epoch_num):
 print 'Done!'
 
 
-pickle.dump(model, open('models/classifier_enc.pkl','wb'))
-pickle.dump(dev_hist, open('models/testHist_enc.pkl','wb'))
-pickle.dump(tr_hist, open('models/trainHist_enc.pkl','wb'))
+# pickle.dump(model, open('models/classifier_enc.pkl','wb'))
+# pickle.dump(dev_hist, open('models/testHist_enc.pkl','wb'))
+# pickle.dump(tr_hist, open('models/trainHist_enc.pkl','wb'))
 
 
 import matplotlib.pyplot as P
@@ -146,7 +157,7 @@ ax[1].plot(100*(1-np.array(dev_hist.acc)),label='Dev')
 # ax[1].plot(100*(1-np.array(tst_hist.acc)),label='Test')
 ax[1].legend()
 ax[1].set_ylim((45,55))
-fig.savefig('train_enc.png')
+fig.savefig('train_%s_%d.png' % (enc,sequence_length))
 
 print 'Min train PER: {:%}'.format(1-np.max(tr_hist.acc))
 # print 'Min test PER: {:%}'.format(1-np.max(tst_hist.acc))

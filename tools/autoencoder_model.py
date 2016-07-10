@@ -22,7 +22,15 @@ from keras import backend as K
 
 
 
-
+def rolling_window(a, window=3):
+    # strides = (shape[-2]*shape[-1]*a.strides[-1],shape[-1]*a.strides[-1],a.strides[-1])
+    # return np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides)
+    width = (window-1)/2
+    start = width
+    out = np.zeros((a.shape[0]-2*width,window,a.shape[1]),dtype=a.dtype)
+    for i in range(start,a.shape[0]-width):
+        out[i-width,:,:]= a[i-width:i+width+1,:]
+    return out
 class EarlyStopping(Callback):
     def __init__(self, monitor='val_loss', patience=3, verbose=0, save_weigths='models/encoder_adam_400.dat'):
         super(Callback, self).__init__()
