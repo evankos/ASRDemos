@@ -8,14 +8,13 @@ import h5py
 
 
 h5 = h5py.File('data/TIMIT_enc_dec_train.hdf5','r')
-X_p = h5['data']['train'][()]
+# X_p = h5['data']['train_normalized'][()]
+X_p = h5['data']['train_original'][()]
+X_p = X_p / 10000
 print'X_p type and shape:', X_p.dtype, X_p.shape
 print'X_p.min():', X_p.min()
 print'X_p.max():', X_p.max()
-# X_p = X_p / 10000
-# print'X_p type and shape:', X_p.dtype, X_p.shape
-# print'X_p.min():', X_p.min()
-# print'X_p.max():', X_p.max()
+
 # X = np.zeros((X_p.shape[0], 5*X_p.shape[1]), dtype=np.float32)
 # for index in tqdm(X_p.shape[0]):
 #     X[index,:] = X_p[index-2,index-1,index,index+1,index+2,:].ravel()
@@ -34,7 +33,8 @@ timesteps = 5
 
 model_enc=auto_encoder(in_out_dim,width,encode_size)
 # model_enc.fit(X_p, X_p,nb_epoch=10, batch_size=128, callbacks=[EarlyStopping(patience=2, save_weigths='models/encoder_adam_400_original.dat')], validation_split=0.1)
-model_enc.load_weights('models/encoder_adam_400.dat')
+# model_enc.load_weights('models/encoder_adam_400.dat')
+model_enc.load_weights('models/encoder_adam_400_original.dat')
 
 X_pred = encode(model_enc,10,X_p[0:2,:])
 print X_pred.shape
