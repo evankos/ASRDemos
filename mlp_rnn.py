@@ -4,7 +4,7 @@ from tools.autoencoder_model import *
 from keras.models import Sequential
 from keras.layers.core import Dense, Activation, Dropout
 from keras.optimizers import Adam, SGD
-from IPython.display import clear_output
+# from IPython.display import clear_output
 from tqdm import *
 
 import sys
@@ -106,7 +106,7 @@ for e in range(epoch_num):
     for u in tqdm(tr_it):
         l,a=model.train_on_batch(np.array([tr_in[u]]),np.array([tr_out[u]]))
         tr_hist.r.addLA(l,a,tr_out[u].shape[0])
-    clear_output()
+    # clear_output()
     tr_hist.log()
 
     for u in range(dev_in.shape[0]):
